@@ -1,0 +1,24 @@
+{
+  "name": "maumau",
+  "main": "maumau.js",
+  "homepage": "https://github.com/nroz/maumau",
+  "authors": [
+    "Tobias Kratz <kratz.tobias@googlemail.com>"
+  ],
+  "description": "Your browser plays Mau-Mau.",
+  "moduleType": [],
+  "keywords": [
+    "maumau"
+  ],
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "jquery": "~2.1.4"
+  }
+}
