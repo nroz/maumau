@@ -15,11 +15,10 @@ var MauMau = (function ($) {
 	 * @param {Number} gamblers
 	 * @constructor
 	 */
-
 	return function MauMau(gamblers) {
 
 		/**
-		 * Cards
+		 * card colors
 		 */
 		var COLOR = {
 			D: 0,  // Karo
@@ -28,8 +27,11 @@ var MauMau = (function ($) {
 			C: 030 // Kreuz
 		};
 
+		/**
+		 * card values
+		 */
 		var VALUE = {
-			S: 00, // 7
+			S: 0, // 7
 			E: 01, // 8
 			N: 02, // 9
 			T: 03, // 10
@@ -42,15 +44,23 @@ var MauMau = (function ($) {
 		/**
 		 * Localisation
 		 */
-
 		var L10n = {};
 
+		// color translation
 		L10n.COLOR = {};
 		L10n.COLOR[COLOR.D] = "Karo";
 		L10n.COLOR[COLOR.H] = "Herz";
 		L10n.COLOR[COLOR.S] = "Pik";
 		L10n.COLOR[COLOR.C] = "Kreuz";
 
+		// color symbol
+		L10n.COLOR_SYMBOL = {};
+		L10n.COLOR_SYMBOL[COLOR.D] = "\u2666";
+		L10n.COLOR_SYMBOL[COLOR.H] = "\u2665";
+		L10n.COLOR_SYMBOL[COLOR.S] = "\u2660";
+		L10n.COLOR_SYMBOL[COLOR.C] = "\u2663";
+
+		// value translation
 		L10n.VALUE = {};
 		L10n.VALUE[VALUE.S] = "Sieben";
 		L10n.VALUE[VALUE.E] = "Acht";
@@ -60,6 +70,17 @@ var MauMau = (function ($) {
 		L10n.VALUE[VALUE.Q] = "Dame";
 		L10n.VALUE[VALUE.K] = "König";
 		L10n.VALUE[VALUE.A] = "Ass";
+
+		// value symbol
+		L10n.VALUE_SYMBOL = {};
+		L10n.VALUE_SYMBOL[VALUE.S] = "7";
+		L10n.VALUE_SYMBOL[VALUE.E] = "8";
+		L10n.VALUE_SYMBOL[VALUE.N] = "9";
+		L10n.VALUE_SYMBOL[VALUE.T] = "10";
+		L10n.VALUE_SYMBOL[VALUE.J] = "B";
+		L10n.VALUE_SYMBOL[VALUE.Q] = "D";
+		L10n.VALUE_SYMBOL[VALUE.K] = "K";
+		L10n.VALUE_SYMBOL[VALUE.A] = "A";
 
 		/**
 		 * HTML body node
@@ -94,6 +115,9 @@ var MauMau = (function ($) {
 			$body.on(event, callback);
 		};
 
+		/**
+		 * log messages
+		 */
 		var report = function () {
 			var args = [].slice.call(arguments);
 			$report.append(args.join(" ") + "\n");
@@ -147,36 +171,99 @@ var MauMau = (function ($) {
 		/**
 		 * Class Card
 		 *
-		 * @param color
-		 * @param value
+		 * @param {number} color
+		 * @param {number} value
 		 * @constructor
 		 */
 		function Card(color, value) {
-			var that, idendity_;
-
+			var that, idendity_, toStringMode_;
 			that = this;
 
+			toStringMode_ = "";
+
+			/**
+			 * color
+			 *
+			 * @type {number}
+			 */
 			that.color = color;
+
+			/**
+			 * value
+			 *
+			 * @type {number}
+			 */
 			that.value = value;
 
+			/**
+			 * card idendity
+			 *
+			 * @type {number}
+			 * @private
+			 */
 			idendity_ = (that.color | that.value);
+
+			/**
+			 * cards idendity
+			 *
+			 * @returns {number|*}
+			 */
 			that.idendity = function () {
 				return idendity_;
 			};
 
-			that.toString = function () {
-				return [L10n.COLOR[that.color], L10n.VALUE[that.value]].join(" ");
-			};
+			that.toString = (function(witch) {
+				toStringSymbol_ = function() {
+					return [L10n.COLOR_SYMBOL[witch.color], L10n.VALUE_SYMBOL[witch.value]].join("");
+				};
+				toStringText_ = function() {
+					return [L10n.COLOR[witch.color], L10n.VALUE[witch.value]].join(" ");
+				};
+				toStringFull_ = function() {
+					return [
+						[L10n.COLOR[witch.color], L10n.VALUE[witch.value]].join(" "),
+						" ", // ;o)
+						"(",
+						L10n.COLOR_SYMBOL[witch.color],
+						L10n.VALUE_SYMBOL[witch.value],
+						")"
+					].join("");
+				};
+
+				/**
+				 * translate value and color
+				 *
+				 * @returns {string}
+				 */
+				switch(toStringMode_) {
+					case "symbol":
+						return toStringSymbol_;
+					case "text":
+						return toStringText_;
+					case "full":
+					default:
+						return toStringFull_;
+				}
+			}(that));
+
 		}
 
 
 		/**
 		 * Class CardCollection
+		 *
 		 * @constructor
 		 */
 		function CardCollection() {
 			var that, collection_, fundOneByIdendity_;
 			that = this;
+
+			/**
+			 * the collection
+			 *
+			 * @type {Array}
+			 * @private
+			 */
 			collection_ = [];
 
 			/**
@@ -258,13 +345,22 @@ var MauMau = (function ($) {
 
 		/**
 		 * Class Table
+		 *
+		 * @extend CardCollection
 		 * @constructor
 		 */
 		function Table() {
 			var that, add_, current_;
 			that = this;
+
+			/**
+			 * extend CardCollection
+			 */
 			CardCollection.call(that);
 
+			/**
+			 * override method
+			 */
 			add_ = that.add;
 			that.add = function (card) {
 				var collection;
@@ -289,26 +385,40 @@ var MauMau = (function ($) {
 				that.collection([]);
 			};
 
-			//listen to card request by deck instance
+			// listen to card request by deck instance
 			listen("deck.card-request", function (e, data) {
 				var collection = that.collection();
 				that.collection(collection.pop());
 				data.receiver.add(collection);
 				report(collection.length, "Karten ins Deck aufgenommen");
 			});
+
+			listen("player.card-store", function (e, card) {
+				that.add(card);
+				trigger("table.card-add");
+			});
+
 		}
 
 
 		/**
 		 * Class Deck
 		 *
+		 * @extend CardCollection
 		 * @constructor
 		 */
 		function Deck() {
 			var that, collection_, get_;
 			that = this;
+
+			/**
+			 * extend CardCollection
+			 */
 			CardCollection.call(that);
 
+			/**
+			 * override method
+			 */
 			get_ = that.get;
 			that.get = function (amount) {
 				amount = amount || 1;
@@ -344,6 +454,7 @@ var MauMau = (function ($) {
 				that.shuffle();
 			};
 
+			// listen to card request by player instance
 			listen("player.card-request", function (e, data) {
 				data.receiver.add(that.get(data.amount || undefined));
 				report("Im Deck sind noch", that.count(), "Karten verfügbar");
@@ -354,11 +465,16 @@ var MauMau = (function ($) {
 		/**
 		 * Class Hand
 		 *
+		 * @extend CardCollection
 		 * @constructor
 		 */
 		function Hand() {
 			var that;
 			that = this;
+
+			/**
+			 * extend CardCollection
+			 */
 			CardCollection.call(that);
 
 			/**
@@ -407,22 +523,29 @@ var MauMau = (function ($) {
 		 * @constructor
 		 */
 		function Player(name) {
-			var that;
+			var that, finished_;
 			that = this;
-			finished_ = false;
-
-			that.name = name;
-			that.hand = new Hand();
-			that.ki = new Ki(this);
 
 			/**
-			 * player has at least one card
+			 * players name
 			 *
-			 * @returns {boolean}
+			 * @type {String}
 			 */
-			that.hasCards = function () {
-				return that.hand.count() > 0;
-			};
+			that.name = name;
+
+			/**
+			 * players cards collection
+			 *
+			 * @type {Hand}
+			 */
+			that.hand = new Hand();
+
+			/**
+			 * players ability
+			 *
+			 * @type {Ki}
+			 */
+			that.ki = new Ki(this);
 
 			/**
 			 * if player is finished he has no more cards
@@ -430,7 +553,17 @@ var MauMau = (function ($) {
 			 * @returns {boolean}
 			 */
 			that.isFinished = function () {
-				return !that.hasCards();
+				if(!finished_) {
+					finished_ = that.hand.count() === 0;
+				}
+				return finished_;
+			};
+
+			/**
+			 * initialize new game
+			 */
+			that.initGame = function() {
+				finished_ = false;
 			};
 
 			/**
@@ -444,12 +577,19 @@ var MauMau = (function ($) {
 
 		/**
 		 * Class Stateful
+		 *
 		 * @constructor
 		 */
 		function Stateful() {
 			var that, states_;
 			that = this;
 
+			/**
+			 * states
+			 *
+			 * @type {{}}
+			 * @private
+			 */
 			states_ = {};
 
 			/**
@@ -473,6 +613,7 @@ var MauMau = (function ($) {
 		 *
 		 * Currently the most stupid player ever
 		 *
+		 * @extend Stateful
 		 * @param {Player} player
 		 * @constructor
 		 */
@@ -480,9 +621,20 @@ var MauMau = (function ($) {
 			var that, next_, choseCard_;
 			that = this;
 
+			/**
+			 * extend Stateful
+			 */
 			Stateful.call(that);
 
-			choseCard_ = function(options, card) {
+			/**
+			 * cheose a card from possible options
+			 *
+			 * @param {[Card]} options
+			 * @param {Card} card
+			 * @returns {Card}
+			 * @private
+			 */
+			choseCard_ = function (options, card) {
 				return (Math.random() > .5 ? options.pop() : options.shift());
 			};
 
@@ -556,14 +708,24 @@ var MauMau = (function ($) {
 		/**
 		 * Class Rules
 		 *
+		 * @extend Stateful
 		 * @constructor
 		 */
 		function Rules() {
 			var that, direction_, ruleset_, findRule_;
 			that = this;
 
+			/**
+			 * extend Stateful
+			 */
 			Stateful.call(that);
 
+			/**
+			 * ruleset
+			 *
+			 * @type {{}}
+			 * @private
+			 */
 			ruleset_ = {};
 			ruleset_[VALUE.S] = {
 				before: function () {
@@ -669,24 +831,38 @@ var MauMau = (function ($) {
 				that.is(VALUE.S, 0);
 				that.is(VALUE.E, false);
 				that.is(VALUE.N, 1);
-				that.is(VALUE.j, false);
+				that.is(VALUE.J, false);
 				that.apply("after");
 			};
 
+			/**
+			 * return current direction state
+			 *
+			 * @returns {Number}
+			 */
 			that.direction = function () {
 				return that.is(VALUE.N);
 			};
 
+			listen("table.card-add", function() {
+				that.apply("after");
+			});
 		}
 
 		// The Game
-		var deck, player, rules, table, actor_, need2pee_, players_, safety_, turns_;
+		var deck, player, rules, table, actor_, need2pee_, players_, safety_, turns_, NEW_GAME_DELAY, TURN_DELAY, PEE_DELAY;
 
-		// initialize
+		// constants
+		NEW_GAME_DELAY = 1000;
+		PEE_DELAY = 1000;
+		TURN_DELAY = 100;
+
+		// initialize parameters
 		gamblers = Math.max(2, Math.min(5, (gamblers || 3)));
 		safety_ = gamblers * 10000;
 		need2pee_ = false;
 
+		// initialize components
 		rules = new Rules();
 		players_ = [];
 		for (var i = 0; i < gamblers; i++) {
@@ -695,6 +871,11 @@ var MauMau = (function ($) {
 		deck = new Deck();
 		table = new Table();
 
+		/**
+		 * initialize game
+		 *
+		 * @private
+		 */
 		init_ = function () {
 			report("Neues Spiel");
 			report("=== === ===");
@@ -704,6 +885,7 @@ var MauMau = (function ($) {
 			deck.init();
 			// give cards to players
 			players_.forEach(function (player) {
+				player.initGame();
 				player.hand.collection(deck.get(5));
 				report(player.name);
 				logCardCollection(player.hand)
@@ -716,13 +898,23 @@ var MauMau = (function ($) {
 			report("=== === ===");
 		};
 
+		/**
+		 * start game
+		 *
+		 * @private
+		 */
 		play_ = function () {
 			turns_ = 0;
 			report("Auf dem Tisch liegt", table.current().toString());
 			report("--- --- ---");
-			window.setTimeout(turn_, 100);
+			window.setTimeout(turn_, TURN_DELAY);
 		};
 
+		/**
+		 * make a turn
+		 *
+		 * @private
+		 */
 		turn_ = function () {
 			var current, card;
 			// player no turn
@@ -730,7 +922,7 @@ var MauMau = (function ($) {
 
 			if (need2pee_) {
 				report(player.name, "muss pinkeln");
-				window.setTimeout(turn_, 1000);
+				window.setTimeout(turn_, PEE_DELAY);
 				return;
 			}
 
@@ -746,8 +938,7 @@ var MauMau = (function ($) {
 					//logPlayer(player)
 				} else {
 					report(player.name, "legt", card.toString());
-					table.add(card);
-					rules.apply("after")
+					trigger("player.card-store", card);
 				}
 			}
 			if (player.isFinished()) {
@@ -755,53 +946,59 @@ var MauMau = (function ($) {
 				report("--- --- ---");
 				report("Ein neues Spiel beginnt in einer Sekunde");
 				report("=== === ===");
-				window.setTimeout(startNewGame_, 1000);
+				window.setTimeout(startNewGame_, NEW_GAME_DELAY);
 				return;
 			}
 
 			report(player.name, "hat noch", player.hand.count(), (player.hand.count() > 1 ? "Karten" : "Karte"));
-			logCardCollection(player.hand);
+			// logCardCollection(player.hand);
 			report("--- --- ---");
 			actor_ += rules.direction();
 
 			if (turns_ % gamblers === 0) {
 				var sum_ = 0;
-				report("CARD COUNT");
-				sum_ +=deck.count();
-				report("Deck", deck.count());
-				sum_ +=table.count();
-				report("Table", table.count());
-				players_.forEach(function(p) {
-					sum_ +=p.hand.count();
+				report("Karten zählen");
+				sum_ += deck.count();
+				report("Im Deck", deck.count());
+				sum_ += table.count();
+				report("Auf dem Tisch", table.count());
+				players_.forEach(function (p) {
+					sum_ += p.hand.count();
 					report(p.name, p.hand.count());
 				});
-				report("SUM",sum_);
+				report("Summe", sum_);
 				report("=== === ===");
-				if(sum_ != 32) {
-					alert("CARD COUNT ERROR");
+				if (sum_ != 32) {
+					alert("Die Summer ist falsch. Es sind zu", (sum_ > 32 ? "viele" : "wenig"), "Karten im Spiel.");
 					return;
 				}
 			}
-
-			window.setTimeout(turn_, 100);
-
+			window.setTimeout(turn_, TURN_DELAY);
 		};
 
+		/**
+		 * start new game
+		 *
+		 * @private
+		 */
 		startNewGame_ = function () {
 			$report.empty();
 			init_();
 			play_();
 		};
 
+		/**
+		 * pause game when click on body
+		 */
 		$body.on("click", function () {
 			need2pee_ = !need2pee_;
 		});
 
+		// one, two, three, four
 		window.setTimeout(startNewGame_, 1);
 
 	};
 
-
 }(jQuery));
-console.debug(MauMau);
+
 var maumau = new MauMau(5);
